@@ -70,6 +70,27 @@ describe('tsConfig generation', () => {
     `)
   })
 
+  it('should exclude .nuxt and .output dirs of external layers', async () => {
+    const { tsConfig } = await _generateTypes(mockNuxtWithOptions({
+      _layers: [
+        { config: { rootDir: '/my-app', srcDir: '/my-app' } },
+        { config: { rootDir: '/external/my-layer', srcDir: '/external/my-layer' } },
+      ],
+    }))
+    expect(tsConfig.exclude).toContain('../../external/my-layer/.nuxt')
+    expect(tsConfig.exclude).toContain('../../external/my-layer/.output')
+  })
+
+  it('should not exclude .nuxt of layers inside the app root', async () => {
+    const { tsConfig } = await _generateTypes(mockNuxtWithOptions({
+      _layers: [
+        { config: { rootDir: '/my-app', srcDir: '/my-app' } },
+        { config: { rootDir: '/my-app/layers/my-layer', srcDir: '/my-app/layers/my-layer' } },
+      ],
+    }))
+    expect(tsConfig.exclude).not.toContain('../layers/my-layer/.nuxt')
+  })
+
   it('should add #build after #components to paths', async () => {
     const { tsConfig } = await _generateTypes(mockNuxtWithOptions({
       alias: {

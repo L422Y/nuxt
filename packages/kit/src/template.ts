@@ -277,6 +277,24 @@ export async function _generateTypes (nuxt: Nuxt): Promise<GenerateTypesReturn> 
   }
 
   const rootDirWithSlash = withTrailingSlash(nuxt.options.rootDir)
+
+  // Exclude .nuxt and .output build directories of external layers to prevent
+  // the TypeScript checker from recursively scanning generated tsconfigs.
+  // When an external layer's srcDir is included via `**/*`, its `.nuxt/`
+  // directory would otherwise be scanned, causing circular resolution and
+  // high CPU usage in IDEs. (Same class of issue as #25548 for modules.)
+  for (const dirs of layerDirs) {
+    if (!dirs.app.startsWith(rootDirWithSlash)) {
+      for (const buildSubDir of ['.nuxt', '.output']) {
+        const layerBuildDir = relativeWithDot(nuxt.options.buildDir, resolve(dirs.root, buildSubDir))
+        exclude.add(layerBuildDir)
+        nodeExclude.add(layerBuildDir)
+        legacyExclude.add(layerBuildDir)
+        sharedExclude.add(layerBuildDir)
+      }
+    }
+  }
+
   for (const dirs of layerDirs) {
     if (!dirs.app.startsWith(rootDirWithSlash) || dirs.root === rootDirWithSlash || dirs.app.includes('node_modules')) {
       const rootGlob = join(relativeWithDot(nuxt.options.buildDir, dirs.root), '**/*')
